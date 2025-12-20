@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="viewer-container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>{{ doc.organization }}{% if doc.department %} - {{ doc.department }}{% endif %}</h2>
+        <a href="{{ url_for('download_file', filename=doc.filename) }}" class="btn btn-primary">
+            <i class="bi bi-download"></i> Скачать оригинал
+        </a>
+    </div>
+    
+    {% if content_type == 'pdf' %}
+        <iframe src="{{ url_for('download_file', filename=doc.filename) }}" 
+                class="viewer-frame" frameborder="0"></iframe>
+    {% elif content_type == 'docx' %}
+        <div class="viewer-content">
+            {{ content|safe }}
+        </div>
+    {% elif content_type == 'image' %}
+        <img src="{{ url_for('download_file', filename=doc.filename) }}" 
+             class="img-fluid viewer-image" alt="Документ">
+    {% else %}
+        <div class="alert alert-warning">
+            Предпросмотр не поддерживается для этого типа файла. 
+            <a href="{{ url_for('download_file', filename=doc.filename) }}" class="btn btn-primary mt-2">
+                Скачать файл
+            </a>
+        </div>
+    {% endif %}
+    
+    <div class="mt-4">
+        <h4>Комментарии</h4>
+        <div id="commentsContainer">
+            {% for comment in doc.comments %}
+            <div class="card mb-2">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">{{ comment.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                        <button class="btn btn-sm btn-danger" 
+                                onclick="deleteComment({{ comment.id }})">Удалить</button>
+                    </div>
+                    <p>{{ comment.text }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <form id="addCommentForm" class="mt-3">
+            <input type="hidden" name="doc_id" value="{{ doc.id }}">
+            <div class="mb-3">
+                <textarea name="comment" class="form-control" rows="3" placeholder="Добавить комментарий..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Добавить комментарий</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

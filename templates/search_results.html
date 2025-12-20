@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="main-container mt-3">
+    <h3>Результаты поиска для: "{{ search_query }}"</h3>
+    <p>Найдено: {{ documents|length }} документ(ов)</p>
+    
+    {% if documents %}
+        <div class="list-group">
+            {% for doc in documents %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <strong>{{ doc.organization }}</strong>
+                        {% if doc.department %} – {{ doc.department }}{% endif %}
+                        {% if doc.surname %} ({{ doc.surname }}){% endif %}
+                        <br>
+                        <small class="text-muted">
+                            {{ doc.date.strftime('%d.%m.%Y') }} |
+                            {% if doc.doc_type == 'incoming' %}📥 Входящий{% else %}📤 Исходящий{% endif %}
+                        </small>
+                    </div>
+                    <button class="btn btn-sm btn-primary" 
+                            onclick="location.href='{{ url_for('view_document', doc_id=doc.id) }}'">
+                        👁️ Открыть
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">Ничего не найдено</div>
+    {% endif %}
+    
+    <a href="{{ url_for('index', tab='search') }}" class="btn btn-secondary mt-3">Новый поиск</a>
+</div>
+{% endblock %}
