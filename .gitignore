@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+/venv
+/env
+/.venv
+
+# PyInstaller
+/build
+/dist
+*.spec.bak
+
+# Database
+/instance
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads and documents
+/documents
+/uploads
+
+# Runtime files
+port.txt
+
+# Development notes (local only)
+need_fix.txt
+notes.txt
+plan.txt
+todo_list.md
+scratch.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,162 @@
+<div class="document-tree">
+    {% if documents %}
+        <ul class="list-group">
+            {% for doc in documents %}
+            <li class="list-group-item document-node {% if doc.children %}has-children{% endif %}">
+                <div class="d-flex align-items-center">
+                    {% if doc.children %}
+                        <span class="toggle-icon me-2" style="cursor: pointer;">📁</span>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <strong>{{ doc.organization }}</strong>
+                        {% if doc.department %} - {{ doc.department }}{% endif %}
+                        {% if doc.surname %} ({{ doc.surname }}){% endif %}
+                        <br>
+                        <small class="text-muted">
+                            {{ doc.date.strftime('%d.%m.%Y') }} | 
+                            {% if doc.doc_type == 'incoming' %}📥 Входящий{% else %}📤 Исходящий{% endif %} |
+                            <span class="status-badge status-{{ doc.status }}">{{ doc.status }}</span>
+                        </small>
+                    </div>
+                    <div class="ms-3 d-flex">
+                        <button class="btn btn-sm btn-outline-primary me-1"
+                                onclick="location.href='{{ url_for('view_document', doc_id=doc.id) }}'">
+                            👁️ Просмотр
+                        </button>
+                        <div class="dropdown d-inline-block">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button"
+                                    id="actionMenu{{ doc.id }}" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                Действия
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="actionMenu{{ doc.id }}">
+                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                       data-bs-target="#commentModal" data-doc-id="{{ doc.id }}">Добавить комментарий</a></li>
+                                <li><a class="dropdown-item" href="#" data-bs-toggle="modal"
+                                       data-bs-target="#editModal" data-doc-id="{{ doc.id }}">Редактировать</a></li>
+                                <li><a class="dropdown-item text-danger" href="#"
+                                       onclick="deleteDocument({{ doc.id }})">Удалить</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if doc.children %}
+                <ul class="list-group nested-list ms-4 mt-2 d-none">
+                    {% for child in doc.children %}
+                    <li class="list-group-item">
+                        <strong>{{ child.organization }}</strong>
+                        {% if child.department %} - {{ child.department }}{% endif %}
+                        <br>
+                        <small class="text-muted">
+                            {{ child.date.strftime('%d.%m.%Y') }} | 
+                            {% if child.doc_type == 'incoming' %}📥 Входящий{% else %}📤 Исходящий{% endif %}
+                        </small>
+                        <div class="mt-1">
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick="location.href='{{ url_for('view_document', doc_id=child.id) }}'">
+                                👁️ Просмотр
+                            </button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="alert alert-info">
+            {% if filters_applied %}
+                Документы по заданным фильтрам не найдены
+            {% else %}
+                Нет документов для отображения
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+
+<!-- Модальное окно для комментариев -->
+<div class="modal fade" id="commentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="commentForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Добавить комментарий</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="doc_id" id="commentDocId">
+                    <div class="mb-3">
+                        <textarea class="form-control" name="comment" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Редактировать документ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="doc_id" id="editDocId">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Организация</label>
+                            <input type="text" name="organization" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Подразделение</label>
+                            <input type="text" name="department" class="form-control">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Фамилия</label>
+                            <input type="text" name="surname" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Дата</label>
+                            <input type="date" name="date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Тип документа</label>
+                            <select name="doc_type" class="form-control" required>
+                                <option value="incoming">Входящий</option>
+                                <option value="outgoing">Исходящий</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Статус</label>
+                            <select name="status" class="form-control" required>
+                                <option value="none">Без статуса</option>
+                                <option value="new">Новый</option>
+                                <option value="in_progress">В работе</option>
+                                <option value="completed">Выполнен</option>
+                                <option value="approved">Согласован</option>
+                                <option value="rejected">Отклонен</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

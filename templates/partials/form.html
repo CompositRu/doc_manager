@@ -1,0 +1,52 @@
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">Добавить новый документ</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_document') }}" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Организация <span class="text-danger">*</span></label>
+                    <input type="text" name="organization" class="form-control" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Подразделение</label>
+                    <input type="text" name="department" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Фамилия</label>
+                    <input type="text" name="surname" class="form-control">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Дата <span class="text-danger">*</span></label>
+                    <input type="date" name="date" class="form-control" required 
+                        value="{{ today }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Тип документа <span class="text-danger">*</span></label>
+                    <select name="doc_type" class="form-select" required>
+                        <option value="incoming">Входящий</option>
+                        <option value="outgoing">Исходящий</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Файл документа <span class="text-danger">*</span></label>
+                    <input type="file" name="file" class="form-control" required>
+                    <small class="text-muted">Поддерживаются все типы файлов</small>
+                </div>
+                <div class="col-md-12">
+                    <label class="form-label">Родительский документ</label>
+                    <select name="parent_id" class="form-select">
+                        <option value="">Нет (корневой документ)</option>
+                        {% for doc in documents %}
+                            <option value="{{ doc.id }}">{{ doc.organization }} ({{ doc.date.strftime('%d.%m.%Y') }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-12 mt-3">
+                    <button type="submit" class="btn btn-primary">Добавить документ</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>

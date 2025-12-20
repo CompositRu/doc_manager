@@ -1,0 +1,108 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [master, main]
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+
+      - name: Build Windows executable
+        run: |
+          pyinstaller main.spec
+
+      - name: Create release package
+        run: |
+          mkdir release
+          cp -r dist/main/* release/
+          cp -r templates release/
+          cp -r static release/
+          cp setup_firewall.bat release/
+          cp README_WINDOWS.md release/ЧИТАЙ_МЕНЯ.txt
+          Compress-Archive -Path release/* -DestinationPath DocManager-Windows.zip
+
+      - name: Get short SHA
+        id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> $env:GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ steps.sha.outputs.short }}
+          name: DocManager Build ${{ steps.sha.outputs.short }}
+          body: |
+            🚀 **DocManager - Автосборка**
+
+            Коммит: `${{ github.sha }}`
+            Сообщение: ${{ github.event.head_commit.message }}
+
+            ## 📦 Установка Windows
+            1. Скачайте `DocManager-Windows.zip`
+            2. Распакуйте в любую папку
+            3. **ВАЖНО:** Настройте брандмауэр для доступа из сети:
+               - Правой кнопкой на `setup_firewall.bat` → Запуск от имени администратора
+               - Или выполните в PowerShell (от админа):
+                 ```
+                 netsh advfirewall firewall add rule name="DocManager" dir=in action=allow protocol=TCP localport=8080
+                 ```
+            4. Запустите `main.exe`
+            5. Приложение откроется в браузере на http://127.0.0.1:8080
+
+            ## 🌐 Использование в локальной сети
+            - **IP адрес будет показан в консоли при запуске!**
+            - Формат: `http://192.168.X.X:8080`
+            - Подключайтесь с других компьютеров по этому адресу
+            - Если не подключается - запустите `setup_firewall.bat` от администратора
+
+            ## 📁 Структура
+            - `main.exe` - основное приложение
+            - `setup_firewall.bat` - настройка брандмауэра (запустить 1 раз от админа)
+            - `templates/` - шаблоны (должны быть рядом с exe)
+            - `static/` - CSS/JS файлы (должны быть рядом с exe)
+            - При первом запуске создаются:
+              - `instance/app.db` - база данных
+              - `uploads/` - хранилище документов
+              - `uploads/trash/` - корзина
+          files: DocManager-Windows.zip
+
+      - name: Delete old releases
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        with:
+          keep_latest: 5
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cleanup orphaned tags
+        run: |
+          # Get all tags matching our pattern
+          $tags = git tag -l "build-*" | Sort-Object
+
+          # Keep only the last 5 tags
+          $tagsToDelete = $tags | Select-Object -SkipLast 5
+
+          # Delete old tags both locally and remotely
+          foreach ($tag in $tagsToDelete) {
+            Write-Host "Deleting tag: $tag"
+            git tag -d $tag
+            git push origin :refs/tags/$tag
+          }

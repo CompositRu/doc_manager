@@ -1,0 +1,40 @@
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0">Корзина</h5>
+    </div>
+    <div class="card-body">
+        {% set deleted_docs = documents|selectattr('is_deleted')|list %}
+        {% if deleted_docs %}
+            <ul class="list-group">
+                {% for doc in deleted_docs %}
+                <li class="list-group-item">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <strong>{{ doc.organization }}</strong>
+                            {% if doc.department %} - {{ doc.department }}{% endif %}
+                            <br>
+                            <small class="text-muted">
+                                Удален: {{ doc.date.strftime('%d.%m.%Y') }} | 
+                                {{ doc.filename }}
+                            </small>
+                        </div>
+                        <div>
+                            <form method="POST" action="{{ url_for('restore_document', doc_id=doc.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-success">Восстановить</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('permanent_delete', doc_id=doc.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-danger ms-1"
+                                        onclick="return confirm('Навсегда удалить документ?')">Удалить навсегда</button>
+                            </form>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <div class="alert alert-info">
+                Корзина пуста
+            </div>
+        {% endif %}
+    </div>
+</div>

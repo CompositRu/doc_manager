@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Document Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <h1 class="mb-4">Документы</h1>
+        
+        <!-- Форма добавления -->
+        <form method="POST" action="/add" enctype="multipart/form-data" class="mb-4 p-3 border rounded">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <input name="organization" class="form-control" placeholder="Организация" required>
+                    <div class="popular-items mt-1" id="popular-organizations"></div>
+                </div>
+                <div class="col-md-3">
+                    <input name="department" class="form-control" placeholder="Подразделение">
+                    <div class="popular-items mt-1" id="popular-departments"></div>
+                </div>
+                <div class="col-md-2"><input name="surname" class="form-control" placeholder="Фамилия"></div>
+                <div class="col-md-2">
+                    <select name="type" class="form-control">
+                        <option value="">Тип документа</option>
+                        <option value="входящий">входящий</option>
+                        <option value="исходящий">исходящий</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input name="date" type="date" class="form-control" required></div>
+                <div class="col-md-2"><input name="tags" class="form-control" placeholder="Теги (через запятую)"></div>
+            </div>
+            <div class="mt-2">
+                <input type="file" name="file" class="form-control" required>
+                <input type="hidden" name="parent_id" id="parent_id" value="">
+                <button type="submit" class="btn btn-primary mt-2">Добавить</button>
+            </div>
+        </form>
+        
+        <!-- Форма фильтрации -->
+        <form method="GET" action="/" class="mb-4 p-3 border rounded">
+            <div class="row g-2">
+                <div class="col-md-2"><input name="filter_organization" class="form-control" placeholder="Организация" value="{{ request.args.get('filter_organization', '') }}"></div>
+                <div class="col-md-2"><input name="filter_department" class="form-control" placeholder="Подразделение" value="{{ request.args.get('filter_department', '') }}"></div>
+                <div class="col-md-2"><input name="filter_surname" class="form-control" placeholder="Фамилия" value="{{ request.args.get('filter_surname', '') }}"></div>
+                <div class="col-md-2">
+                    <select name="filter_type" class="form-control">
+                        <option value="">Все типы</option>
+                        <option value="входящий" {% if request.args.get('filter_type') == 'входящий' %}selected{% endif %}>входящий</option>
+                        <option value="исходящий" {% if request.args.get('filter_type') == 'исходящий' %}selected{% endif %}>исходящий</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select name="filter_status" class="form-control">
+                        <option value="">Все статусы</option>
+                        <option value="Новый" {% if request.args.get('filter_status') == 'Новый' %}selected{% endif %}>Новый</option>
+                        <option value="в работе" {% if request.args.get('filter_status') == 'в работе' %}selected{% endif %}>в работе</option>
+                        <option value="выполнен" {% if request.args.get('filter_status') == 'выполнен' %}selected{% endif %}>выполнен</option>
+                        <option value="согласован" {% if request.args.get('filter_status') == 'согласован' %}selected{% endif %}>согласован</option>
+                        <option value="отклонён" {% if request.args.get('filter_status') == 'отклонён' %}selected{% endif %}>отклонён</option>
+                        <option value="без статуса" {% if request.args.get('filter_status') == 'без статуса' %}selected{% endif %}>без статуса</option>
+                    </select>
+                </div>
+                <div class="col-md-2"><input name="filter_tags" class="form-control" placeholder="Теги" value="{{ request.args.get('filter_tags', '') }}"></div>
+            </div>
+            <div class="row g-2 mt-2">
+                <div class="col-md-2"><input name="date_from" type="date" class="form-control" placeholder="От" value="{{ request.args.get('date_from', '') }}"></div>
+                <div class="col-md-2"><input name="date_to" type="date" class="form-control" placeholder="До" value="{{ request.args.get('date_to', '') }}"></div>
+                <div class="col-md-2"><input name="search_query" class="form-control" placeholder="Поиск по содержимому" value="{{ request.args.get('search_query', '') }}"></div>
+                <div class="col-md-6 text-end">
+                    <button type="submit" class="btn btn-success">Фильтровать</button>
+                    <a href="/" class="btn btn-secondary">Сбросить</a>
+                    <button type="button" class="btn btn-info" onclick="location.href='/'">Обновить список</button>
+                    <a href="/export_to_excel" class="btn btn-success">Экспорт в Excel</a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Таблица документов -->
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th><a href="/?sort=organization&{{ request.query_string.decode('utf-8').replace('sort=', '').replace('&sort=organization', '') }}">Организация</a></th>
+                    <th><a href="/?sort=department&{{ request.query_string.decode('utf-8').replace('sort=', '').replace('&sort=department', '') }}">Подразделение</a></th>
+                    <th><a href="/?sort=surname&{{ request.query_string.decode('utf-8').replace('sort=', '').replace('&sort=surname', '') }}">Фамилия</a></th>
+                    <th><a href="/?sort=date&{{ request.query_string.decode('utf-8').replace('sort=', '').replace('&sort=date', '') }}">Дата</a></th>
+                    <th>Тип</th>
+                    <th>Статус</th>
+                    <th>Теги</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                    {% if doc.parent_id is none %}
+                <tr>
+                    <td>{{ doc.organization }}</td>
+                    <td>{{ doc.department or '' }}</td>
+                    <td>{{ doc.surname or '' }}</td>
+                    <td>{{ doc.date.strftime('%d.%m.%Y') }}</td>
+                    <td>{{ doc.doc_type or '' }}</td>
+                    <td>
+                        <select class="status-select form-control-sm" data-id="{{ doc.id }}">
+                            {% for status in config_statuses %}
+                            <option value="{{ status }}" {% if doc.status == status %}selected{% endif %}>{{ status }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>{{ doc.tags or '' }}</td>
+                    <td>
+                        <a href="{{ url_for('open_file', filename=doc.filename) }}" class="btn btn-sm btn-outline-primary">Открыть</a>
+                        <button class="btn btn-sm btn-warning add-child-btn" data-doc-id="{{ doc.id }}">Добавить вложение</button>
+                        <button class="btn btn-sm btn-info edit-btn" data-doc-id="{{ doc.id }}">Редактировать</button>
+                        <button class="btn btn-sm btn-danger delete-btn" data-doc-id="{{ doc.id }}">Удалить</button>
+                        {% if doc.children %}
+                        <button class="btn btn-sm btn-secondary toggle-children-btn" data-doc-id="{{ doc.id }}">Вложения ({{ doc.children|length }})</button>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                {% if doc.children %}
+                <tr id="children-{{ doc.id }}" class="child-row" style="display: none;">
+                    <td colspan="8">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Организация</th>
+                                    <th>Подразделение</th>
+                                    <th>Фамилия</th>
+                                    <th>Дата</th>
+                                    <th>Тип</th>
+                                    <th>Теги</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for child in doc.children %}
+                                <tr>
+                                    <td>{{ child.organization }}</td>
+                                    <td>{{ child.department or '' }}</td>
+                                    <td>{{ child.surname or '' }}</td>
+                                    <td>{{ child.date.strftime('%d.%m.%Y') }}</td>
+                                    <td>{{ child.doc_type or '' }}</td>
+                                    <td>{{ child.tags or '' }}</td>
+                                    <td>
+                                        <a href="{{ url_for('open_file', filename=child.filename) }}" class="btn btn-sm btn-outline-primary">Открыть</a>
+                                        <button class="btn btn-sm btn-info edit-btn" data-doc-id="{{ child.id }}">Редактировать</button>
+                                        <button class="btn btn-sm btn-danger delete-btn" data-doc-id="{{ child.id }}">Удалить</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+                {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Модальное окно для редактирования документа -->
+        <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editModalLabel">Редактировать документ</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="editForm">
+                            <input type="hidden" id="edit_doc_id" name="doc_id">
+                            <div class="mb-3">
+                                <label for="edit_organization" class="form-label">Организация</label>
+                                <input type="text" class="form-control" id="edit_organization" name="organization">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_department" class="form-label">Подразделение</label>
+                                <input type="text" class="form-control" id="edit_department" name="department">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_surname" class="form-label">Фамилия</label>
+                                <input type="text" class="form-control" id="edit_surname" name="surname">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_date" class="form-label">Дата</label>
+                                <input type="date" class="form-control" id="edit_date" name="date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_tags" class="form-label">Теги</label>
+                                <input type="text" class="form-control" id="edit_tags" name="tags">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_type" class="form-label">Тип документа</label>
+                                <select class="form-control" id="edit_type" name="type">
+                                    <option value="">Выберите тип</option>
+                                    <option value="входящий">входящий</option>
+                                    <option value="исходящий">исходящий</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_comments" class="form-label">Комментарии</label>
+                                <textarea class="form-control" id="edit_comments" name="comments" rows="3"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn btn-primary" onclick="saveEdit()">Сохранить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- JavaScript -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+            // Функция для установки ID родительского документа при добавлении вложения
+            function setParentId(parentId) {
+                document.getElementById('parent_id').value = parentId;
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            
+            // Функция для переключения отображения дочерних документов
+            function toggleChildren(docId) {
+                const row = document.getElementById(`children-${docId}`);
+                if (row.style.display === 'none' || row.style.display === '') {
+                    row.style.display = 'table-row';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+            
+            // Функция для редактирования документа
+            function editDocument(docId) {
+                // Получаем данные документа и заполняем модальное окно
+                fetch(`/get_document/${docId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('edit_doc_id').value = data.id;
+                        document.getElementById('edit_organization').value = data.organization;
+                        document.getElementById('edit_department').value = data.department || '';
+                        document.getElementById('edit_surname').value = data.surname || '';
+                        document.getElementById('edit_date').value = data.date;
+                        document.getElementById('edit_tags').value = data.tags || '';
+                        document.getElementById('edit_type').value = data.doc_type || '';
+                        document.getElementById('edit_comments').value = data.comments || '';
+                        
+                        // Открываем модальное окно
+                        var modal = new bootstrap.Modal(document.getElementById('editModal'));
+                        modal.show();
+                    })
+                    .catch(error => console.error('Ошибка при получении данных документа:', error));
+            }
+            
+            // Функция для сохранения изменений документа
+            function saveEdit() {
+                const formData = new FormData(document.getElementById('editForm'));
+                
+                fetch('/edit_document', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        alert('Документ успешно обновлён');
+                        location.reload(); // Обновляем страницу после успешного редактирования
+                    } else {
+                        alert('Ошибка при сохранении документа');
+                    }
+                })
+                .catch(error => console.error('Ошибка:', error));
+            }
+            
+            // Функция для удаления документа
+            function deleteDocument(docId) {
+                if (confirm('Вы уверены, что хотите удалить этот документ?')) {
+                    fetch(`/delete_document/${docId}`, {
+                        method: 'POST'
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            alert('Документ успешно удалён');
+                            location.reload(); // Обновляем страницу после успешного удаления
+                        } else {
+                            alert('Ошибка при удалении документа');
+                        }
+                    })
+                    .catch(error => console.error('Ошибка:', error));
+                }
+            }
+            
+            // Обработка изменения статуса документа
+            document.querySelectorAll('.status-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const docId = this.getAttribute('data-id');
+                    const newStatus = this.value;
+                    
+                    fetch('/update_status', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            doc_id: docId,
+                            status: newStatus
+                        })
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка при обновлении статуса');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка:', error);
+                        alert('Произошла ошибка при обновлении статуса');
+                    });
+                });
+            });
+            
+            // Загрузка популярных организаций и подразделений
+            document.addEventListener('DOMContentLoaded', function() {
+                loadPopularItems();
+                
+                // Добавляем обработчики событий для кнопок
+                document.addEventListener('click', function(e) {
+                    // Обработка кнопки "Добавить вложение"
+                    if (e.target.classList.contains('add-child-btn')) {
+                        const docId = e.target.getAttribute('data-doc-id');
+                        setParentId(docId);
+                    }
+                    
+                    // Обработка кнопки "Редактировать"
+                    if (e.target.classList.contains('edit-btn')) {
+                        const docId = e.target.getAttribute('data-doc-id');
+                        editDocument(docId);
+                    }
+                    
+                    // Обработка кнопки "Удалить"
+                    if (e.target.classList.contains('delete-btn')) {
+                        const docId = e.target.getAttribute('data-doc-id');
+                        deleteDocument(docId);
+                    }
+                    
+                    // Обработка кнопки "Вложения"
+                    if (e.target.classList.contains('toggle-children-btn')) {
+                        const docId = e.target.getAttribute('data-doc-id');
+                        toggleChildren(docId);
+                    }
+                });
+            });
+            
+            function loadPopularItems() {
+                fetch('/get_popular_items')
+                    .then(response => response.json())
+                    .then(data => {
+                        const orgContainer = document.getElementById('popular-organizations');
+                        const deptContainer = document.getElementById('popular-departments');
+                        
+                        // Отображение популярных организаций
+                        if (data.popular_orgs && data.popular_orgs.length > 0) {
+                            orgContainer.innerHTML = '<small>Популярные: </small>';
+                            data.popular_orgs.forEach(org => {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'btn btn-outline-secondary btn-sm mx-1 my-1';
+                                btn.textContent = org.name;
+                                btn.onclick = () => document.querySelector('input[name="organization"]').value = org.name;
+                                orgContainer.appendChild(btn);
+                            });
+                        }
+                        
+                        // Отображение популярных подразделений
+                        if (data.popular_depts && data.popular_depts.length > 0) {
+                            deptContainer.innerHTML = '<small>Популярные: </small>';
+                            data.popular_depts.forEach(dept => {
+                                const btn = document.createElement('button');
+                                btn.type = 'button';
+                                btn.className = 'btn btn-outline-secondary btn-sm mx-1 my-1';
+                                btn.textContent = dept.name;
+                                btn.onclick = () => document.querySelector('input[name="department"]').value = dept.name;
+                                deptContainer.appendChild(btn);
+                            });
+                        }
+                    })
+                    .catch(error => console.error('Ошибка при загрузке популярных элементов:', error));
+            }
+        </script>
+    </div>
+</body>
+</html>
