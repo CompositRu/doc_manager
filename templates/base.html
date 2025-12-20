@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Боковая панель с фильтрами -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-3">
+                <h5 class="border-bottom pb-2">Фильтры документов</h5>
+                <form id="filterForm" method="GET" action="{{ url_for('filter_documents') }}">
+                    <div class="mb-3">
+                        <label class="form-label small">Организация</label>
+                        <input type="text" name="organization" class="form-control form-control-sm"
+                               value="{{ request.args.get('organization', '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Подразделение</label>
+                        <input type="text" name="department" class="form-control form-control-sm"
+                               value="{{ request.args.get('department', '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Тип документа</label>
+                        <select name="doc_type" class="form-select form-select-sm">
+                            <option value="">Все</option>
+                            <option value="incoming" {% if request.args.get('doc_type') == 'incoming' %}selected{% endif %}>Входящий</option>
+                            <option value="outgoing" {% if request.args.get('doc_type') == 'outgoing' %}selected{% endif %}>Исходящий</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Статус</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="all">Все</option>
+                            <option value="none" {% if request.args.get('status') == 'none' %}selected{% endif %}>Без статуса</option>
+                            <option value="new" {% if request.args.get('status') == 'new' %}selected{% endif %}>Новый</option>
+                            <option value="in_progress" {% if request.args.get('status') == 'in_progress' %}selected{% endif %}>В работе</option>
+                            <option value="completed" {% if request.args.get('status') == 'completed' %}selected{% endif %}>Выполнен</option>
+                            <option value="approved" {% if request.args.get('status') == 'approved' %}selected{% endif %}>Согласован</option>
+                            <option value="rejected" {% if request.args.get('status') == 'rejected' %}selected{% endif %}>Отклонен</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Дата от</label>
+                        <input type="date" name="start_date" class="form-control form-control-sm"
+                               value="{{ request.args.get('start_date', '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small">Дата до</label>
+                        <input type="date" name="end_date" class="form-control form-control-sm"
+                               value="{{ request.args.get('end_date', '') }}">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">Применить</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                onclick="window.location.href='{{ url_for('index') }}'">Сбросить</button>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- Основной контент -->
+            <div class="col-md-9 col-lg-10 main-content">
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <script>
+                {% for message in messages %}
+                    showToast('{{ message }}');
+                {% endfor %}
+            </script>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>
