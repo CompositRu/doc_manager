@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="main-container">
+    <!-- Навигация по табам -->
+    <ul class="nav nav-tabs mt-3">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'documents' %}active{% endif %}" 
+               href="#documents" data-bs-toggle="tab">Документы</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'add' %}active{% endif %}" 
+               href="#add-document" data-bs-toggle="tab">Добавить</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab in ['search', 'filter'] %}active{% endif %}" 
+               href="#filters" data-bs-toggle="tab">Фильтры</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'trash' %}active{% endif %}" 
+               href="#trash" data-bs-toggle="tab">Корзина</a>
+        </li>
+        <li class="nav-item ms-auto">
+            <a class="nav-link" href="{{ url_for('export_excel') }}">
+                <i class="bi bi-file-earmark-excel"></i> Экспорт в Excel
+            </a>
+        </li>
+    </ul>
+    
+    <!-- Содержимое табов -->
+    <div class="tab-content py-3">
+        <!-- Таб документов -->
+        <div class="tab-pane fade {% if active_tab == 'documents' %}show active{% endif %}" id="documents">
+            {% include 'partials/document_tree.html' %}
+        </div>
+        
+        <!-- Таб добавления -->
+        <div class="tab-pane fade {% if active_tab == 'add' %}show active{% endif %}" id="add-document">
+            {% include 'partials/form.html' %}
+        </div>
+        
+        <!-- Таб фильтров -->
+        <div class="tab-pane fade {% if active_tab in ['search', 'filter'] %}show active{% endif %}" id="filters">
+            {% include 'partials/filters.html' %}
+            {% if active_tab == 'search' and search_query %}
+                <div class="mt-4">
+                    <h4>Результаты поиска для: "{{ search_query }}"</h4>
+                    {% include 'partials/document_tree.html' %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Таб корзины -->
+        <div class="tab-pane fade {% if active_tab == 'trash' %}show active{% endif %}" id="trash">
+            {% include 'partials/trash.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
